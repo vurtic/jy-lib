@@ -3,37 +3,14 @@ import maya.mel as mel
 import pymel.core as pm
 
 
-def getName(oItem):
-    """Gets the name of the object with namespaces.
-
-    A string or PyNode may be provided. The function will return the name (including
-    namespaces) of the object ignoring any hierarchical information.
-    
-    Args:
-        oItem (str or PyNode): the object
-    Returns:
-        str: the name of the object
-    """
-    try:
-        uLongName = oItem.longName()
-    except AttributeError:
-        uLongName = oItem
-    uName = uLongName.split('|')[-1]
-    return uName
-
-
-def getNamespace(oItem):
-    """Gets the namespace of the object
-
-    A string or PyNode may be provided. The function will return the full namespace
-    of the object.
+def getNamespace(uName):
+    """Gets the namespace of the object.
 
     Args:
-        oItem (str or PyNode): the object
+        uItem (str): the object
     Returns:
         str: the namespace
     """
-    uName = getName(oItem)
     lSplit = uName.rsplit(':', 1)
     if len(lSplit) > 1:
         return lSplit[0]
@@ -41,18 +18,14 @@ def getNamespace(oItem):
         return ''
 
 
-def getObjectName(oItem):
+def getObjectName(uName):
     """Gets the name of the object without namespaces.
-    
-    A string or PyNode may be provided. The function will return the name (ignoring
-    namespaces) of the object ignoring any hierarchical information. 
 
     Args:
         oItem (str or PyNode): the object
     Returns:
         str: the name of the object
     """
-    uName = getName(oItem)
     try:
         return uName.rsplit(':', 1)[1]
     except IndexError:
@@ -71,20 +44,8 @@ def reposition(oParent, oChild, uType='parent'):
         oChild (xform or list of xforms): child or children
         uType (str): type of action to perform (parent, point, orient)
     """
-    if isinstance(oParent, basestring):
-        lParent = [oParent]
-    elif isinstance(oParent, pm.nodetypes.DagNode):
-        lParent = [oParent]
-    else:
-        lParent = oParent
-    lParent = [getName(x) for x in lParent]
-    if isinstance(oChild, basestring):
-        lChild = [oChild]
-    elif isinstance(oChild, pm.nodetypes.DagNode):
-        lChild = [oChild]
-    else:
-        lChild = oChild
-    lChild = [getName(x) for x in lChild]
+    lParent = _getListOfObjectNames(oParent)
+    lChild = _getListOfObjectNames(oChild)
     for uChild in lChild:
         if uType == 'point':
             constraint = cmds.pointConstraint(lParent, uChild)
@@ -93,6 +54,31 @@ def reposition(oParent, oChild, uType='parent'):
         else:
             constraint = cmds.parentConstraint(lParent, uChild)
         cmds.delete(constraint)
+
+
+def _getListOfObjectNames(oObj):
+    """Converts a given object into a list of strings.
+    
+    Converts a single PyMel object or list of PyMel objects into
+    a list of the objects' long names. Converts a string that refers to
+    an object to a list containing that string.
+
+    Args:
+        oObj (xform or list of xforms): given object
+    Returns:
+        list: list of names of the objects
+    """
+    if isinstance(oObj, basestring):
+        lObj = [oObj]
+    elif isinstance(oObj, pm.nodetypes.DagNode):
+        lObj = [oObj]
+    else:
+        lObj = oObj
+    try:
+        lObj = [x.longName() for x in lObj]
+    except AttributeError:
+        pass
+    return lObj
 
 
 def getHierarchy(xStart, xEnd):
@@ -161,13 +147,16 @@ def checkContinuousHierarchy(lJoints):
 
 
 def midpoint((x1, y1, z1), (x2, y2, z2)):
+    """Gets the midpoint of two points."""
     return ((x1+x2)/2, (y1+y2)/2, (z1+z2)/2)
 
 
 def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
+    """Determines if two points are close based on a tolerance."""
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 
 def getVariable(uVariable):
+    """Gets the value of globally defined mel variables."""
     uType = mel.eval('whatIs "${}"'.format(uVariable)).split(' ')[0]
     return mel.eval('$temp{} = ${}'.format(uType, uVariable))
