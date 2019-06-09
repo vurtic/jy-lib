@@ -1,6 +1,7 @@
 import maya.cmds as cmds
 import maya.mel as mel
 import pymel.core as pm
+import pymel.core.datatypes as dt
 
 
 def getNamespace(uName):
@@ -160,3 +161,18 @@ def getVariable(uVariable):
     """Gets the value of globally defined mel variables."""
     uType = mel.eval('whatIs "${}"'.format(uVariable)).split(' ')[0]
     return mel.eval('$temp{} = ${}'.format(uType, uVariable))
+
+def calculateClosestPointOnPlane(vecPlane1, vecPlane2, vecPlane3, vecPoint):
+    """Calculates the closest point on a plane defined by 3 points from a provided point.
+    
+    Args:
+        vecPlane1 (dt.Vector): point1 on plane
+        vecPlane2 (dt.Vector): point2 on plane
+        vecPlane3 (dt.Vector): point3 on plane
+        vecPoint (dt.Vector): point to find the closest point from
+    Returns:
+        dt.Vector: point on the plane closest to vecPoint
+    """
+    vecPlaneNormal = ((vecPlane2 - vecPlane1).cross(vecPlane3 - vecPlane1)).normal()
+    distance = vecPlaneNormal.dot(vecPoint - vecPlane1)
+    return vecPoint + -distance * vecPlaneNormal
