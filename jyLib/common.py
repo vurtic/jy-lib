@@ -151,7 +151,7 @@ def midpoint((x1, y1, z1), (x2, y2, z2)):
     return ((x1+x2)/2, (y1+y2)/2, (z1+z2)/2)
 
 
-def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
+def isclose(a, b, rel_tol=1e-09, abs_tol=0.00001):
     """Determines if two points are close based on a tolerance."""
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
