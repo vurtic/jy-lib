@@ -141,8 +141,10 @@ def checkContinuousHierarchy(lJoints):
     i = 1
     while i < len(lJoints):
         if not lJoints[i].getParent() in lJoints:
-            pm.warning('{} does not influence the mesh, but a child of it does. Adding it to the selection'.format(lJoints[i].getParent().name()))
-            lJoints.append(lJoints[i].getParent())
+            pm.warning(('{} does not influence the mesh, but a child of it does. '
+                        'Adding it to the selection').format(lJoints[i].getParent().name()))
+            lJoints.insert(i, lJoints[i].getParent())
+        else:
         i += 1
     return lJoints
 
