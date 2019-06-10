@@ -219,9 +219,14 @@ def hasOffsetXform(xCtrl):
         bool: whether or not the parent is an offset transform
     """
     xParent = xCtrl.getParent()
-    if xParent is None or pm.listRelatives(xParent, s=True):
-        # xCtrl is a child of the world or
-        # there is at least one shape node as a child of xParent
+    if xParent is None:
+        # xCtrl is a parented to the world
+        return False
+    elif pm.listRelatives(xParent, s=True):
+        # There is a shape node associated with the parent
+        return False
+    elif len(pm.listRelatives(xParent, typ='transform')) > 1:
+        # There is more than one transform child of the parent
         return False
     return True
 
