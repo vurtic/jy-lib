@@ -59,7 +59,7 @@ def reposition(oParent, oChild, uType='parent'):
 
 def _getListOfObjectNames(oObj):
     """Converts a given object into a list of strings.
-    
+
     Converts a single PyMel object or list of PyMel objects into
     a list of the objects' long names. Converts a string that refers to
     an object to a list containing that string.
@@ -145,7 +145,7 @@ def checkContinuousHierarchy(lJoints):
                         'Adding it to the selection').format(lJoints[i].getParent().name()))
             lJoints.insert(i, lJoints[i].getParent())
         else:
-        i += 1
+            i += 1
     return lJoints
 
 
@@ -166,7 +166,7 @@ def getVariable(uVariable):
 
 def calculateClosestPointOnPlane(vecPlane1, vecPlane2, vecPlane3, vecPoint):
     """Calculates the closest point on a plane defined by 3 points from a provided point.
-    
+
     Args:
         vecPlane1 (dt.Vector): point1 on plane
         vecPlane2 (dt.Vector): point2 on plane
@@ -178,3 +178,80 @@ def calculateClosestPointOnPlane(vecPlane1, vecPlane2, vecPlane3, vecPoint):
     vecPlaneNormal = ((vecPlane2 - vecPlane1).cross(vecPlane3 - vecPlane1)).normal()
     distance = vecPlaneNormal.dot(vecPoint - vecPlane1)
     return vecPoint + -distance * vecPlaneNormal
+
+
+def renameUnitConversion(attrDest):
+    """Renames the connected Unit Conversion node based on the input attribute.
+
+    Args:
+        attrDest (Attribute): attribute that the unit conversion node is connected to
+    """
+    # Get the unit conversion node connected to the attribute
+    lUnitConversion = pm.listConnections(attrDest, t='unitConversion')
+    if lUnitConversion:
+        unitcNode = lUnitConversion[0]
+        # Get the attribute that is connected to unit conversion input
+        lUnitConversionInputAttr = pm.listConnections(unitcNode.input, d=False, p=True)
+        if lUnitConversionInputAttr:
+            attrSrc = lUnitConversionInputAttr[0]
+            # Create a list from the attribute's name delimited on '_' and '.'
+            lNewName = attrSrc.name().replace('.', '_').split('_')
+            if lNewName[0] == 'Jnt':
+                # If the connected attribute is from a joint, remove the joint flags from the name
+                del lNewName[3]
+            lNewName[0] = 'UnitC'
+            # Add a number to the end so that multiple unit conversion nodes from
+            # the same attribute can be created.
+            lNewName.append('1')
+            pm.rename(unitcNode, '_'.join(lNewName))
+
+
+def hasOffsetXform(xCtrl):
+    """Checks if the provided transform's parent is an offset transform.
+
+    If the parent transform does not have a shape node as a child, the function returns true.
+    If the parent transform has at least one shape node as a child, the function return false.
+    Used to determine if an offset group needs to be created for properly oriented rigging controls.
+
+    Args:
+        xCtrl (xform): transform (control curve) to check the parent of
+    Returns:
+        bool: whether or not the parent is an offset transform
+    """
+    xParent = xCtrl.getParent()
+    if xParent is None or pm.listRelatives(xParent, s=True):
+        # xCtrl is a child of the world or
+        # there is at least one shape node as a child of xParent
+        return False
+    return True
+
+
+def createOffsetXform(xCtrl, xDriven=None):
+    """Creates an offset transform for the provided controller.
+
+    The pivot position and orientation of the xCtrl controller will match the provided xDriven
+    transform. If no xDriven transform is provided, the offset group will match the pivot of the
+    controller. The controller shape will not appear to move and the controller's transform
+    will be zeroed out.
+
+    Args:
+        xCtrl (xform): transform (control curve) to create the offset group for
+        xDriven (xform, optional): transform to get pivot position and orientation from
+    Returns:
+        xform: the offset transform
+    """
+    lSplit = xCtrl.split('_')
+    # Ctrl_L_Hand
+    # Xform_L_HandCtrl
+    xOffset = pm.createNode('transform', n='Xform_{}_{}{}'.format(lSplit[1], lSplit[2], lSplit[0]))
+    if xDriven is None:
+        reposition(xCtrl, xOffset)
+    else:
+        reposition(xDriven, xOffset)
+        # Set the controller's pivot to match the driven object's pivot
+        lDrivenRotatePivot = pm.xform(xDriven, q=True, rp=True, ws=True)
+        pm.xform(xCtrl, piv=lDrivenRotatePivot, ws=True)
+    pm.parent(xOffset, xCtrl.getParent())
+    pm.parent(xCtrl, xOffset)
+    pm.makeIdentity(xCtrl, a=True, t=True, r=True, s=True, n=0, pn=True)
+    return xOffset
